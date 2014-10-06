@@ -25,8 +25,6 @@
       <div id="loggedin">
         <div id="user-profile">
         </div>
-        <div id="user-playlists">
-        </div>
         <div id="oauth">
         </div>
         <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
@@ -50,19 +48,11 @@
             <dt>Link</dt><dd><a href="{{href}}">{{href}}</a></dd>
             <dt>Profile Image</dt><dd class="clearfix"><a href="{{images.0.url}}">{{images.0.url}}</a></dd>
             <dt>Country</dt><dd>{{country}}</dd>
-          </dl>
-        </div>
-      </div>
-    </script>
-
-    <script id="user-playlists-template" type="text/x-handlebars-template">
-      <div class="media">
-        <div class="media-body">
-          <dl class="dl-horizontal">
-          <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
-          {{#each items}}
-            <dd>{{this.name}}</dd>
-          {{/each}}
+            <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
+            <dt>Playlists</dt>
+            {{#each playlists}}
+              <dd>[{{this.name}}][{{this.id}}][{{this.tracks.total}}]</dd>
+            {{/each}}
           </dl>
         </div>
       </div>
@@ -107,30 +97,28 @@
           $.ajax({
               url:     'https://api.spotify.com/v1/me',
               headers: { 'Authorization': 'Bearer ' + access_token },
-              success: function(response) {
-                userProfilePlaceholder.innerHTML = userProfileTemplate(response);
-                display_playlists( access_token, response.id );
+              success: function( response ) {
+                userProfilePlaceholder.innerHTML = userProfileTemplate( response );
+                display_playlists( access_token, response );
                 $('#login').hide();
                 $('#loggedin').show();
               }
           });
         }
 
-        function display_playlists( access_token, user_id ) {
-          $.ajax({ url:     'https://api.spotify.com/v1/users/' + user_id + '/playlists',
+        function display_playlists( access_token, user_profile ) {
+          $.ajax({ url:     'https://api.spotify.com/v1/users/' + user_profile.id + '/playlists',
                    headers: { 'Authorization': 'Bearer ' + access_token },
-                   success: function(response) {
-                     userPlaylistsPlaceholder.innerHTML = userPlaylistsTemplate(response);
+                   success: function( response ) {
+                     userProfilePlaceholder.innerHTML = userProfileTemplate( $.extend( user_profile, { "playlists": response.items } ));
                    }
           });
         }
 
-        var userProfileTemplate      = template( 'user-profile-template' ),
-            userPlaylistsTemplate    = template( 'user-playlists-template' ),
-            oauthTemplate            = template( 'oauth-template' ),
-            userProfilePlaceholder   = elem( 'user-profile' ),
-            userPlaylistsPlaceholder = elem( 'user-playlists' ),
-            oauthPlaceholder         = elem( 'oauth' );
+        var userProfileTemplate    = template( 'user-profile-template' ),
+            oauthTemplate          = template( 'oauth-template' ),
+            userProfilePlaceholder = elem( 'user-profile' ),
+            oauthPlaceholder       = elem( 'oauth' );
 
         var params        = getHashParams();
         var access_token  = params.access_token
