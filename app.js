@@ -1,18 +1,12 @@
-/**
- * This is an example of a basic node.js script that performs
- * the Authorization Code oAuth2 flow to authenticate against
- * the Spotify Accounts.
- *
- * For more information, read
- * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
- */
 
-var express       = require( 'express'); // Express web server framework
-var request       = require( 'request'); // "Request" library
-var querystring   = require( 'querystring');
-var cookieParser  = require( 'cookie-parser');
+var express       = require( 'express' );
+var request       = require( 'request' );
+var _             = require( 'underscore' );
+var querystring   = require( 'querystring' );
+var cookieParser  = require( 'cookie-parser' );
 var fs            = require( 'fs');
-var http          = require( 'http');
+var util          = require( 'util' );
+
 var app           = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
 var client_id     = app['client']['id'];
 var client_secret = app['client']['secret'];
@@ -43,24 +37,30 @@ var redirect = function( res, url, params ) {
 }
 
 
+var param = function( req, name ){
+  return req.query[ name ] || null;
+}
+
+
 var get = function( access_token, url, handler ) {
 
-  var request_url = 'https://api.spotify.com/v1' + url
-  var options     = { headers: { 'Authorization': 'Bearer ' + access_token }};
+  // https://www.npmjs.org/package/request
 
-  request.get( request_url, options, function( error, response, body ){
+  request.get( url,
+               { headers: { 'Authorization': 'Bearer ' + access_token }},
+               function( error, response, body ){
     if (( ! error ) && ( response.statusCode === 200 )) {
       handler( body )
     } else {
-      console.log( "Failed to send GET request to '" + request_url + "', status code is " + response.statusCode )
+      console.log( "Failed to send GET request to '" + url + "', status code is " + response.statusCode )
+      if ( error ){ console.log( error ) }
       console.log( body )
     }
   });
 }
 
 
-app.use(express.static(__dirname + '/public'))
-   .use(cookieParser());
+app.use( express.static( __dirname + '/public' )).use( cookieParser());
 
 
 app.get( '/login', function( req, res ) {
@@ -117,27 +117,42 @@ app.get( '/callback', function( req, res ) {
 
 
 app.get( '/export', function( req, res ) {
-  // http://stackoverflow.com/a/25210806/472153
-  res.writeHead( 200, { 'Content-Type':        'application/zip',
-                        'Content-disposition': 'attachment; filename=export.zip' });
 
-  var user_id     = req.query.user  || null;
-  var playlist_id = req.query.id    || null;
-  var token       = req.query.token || null;
+  var token         = param( req, 'token'  );
+  var playlist_name = param( req, 'name'   );
+  var tracks_url    = param( req, 'tracks' );
 
-  get( token, '/me', function( response ){
-    console.log( response )
+  if (( token === null ) || ( playlist_name === null ) || ( tracks_url === null )) {
+    console.log( util.format( "Missing parameters: token = [%s], playlist name = [%s], tracks URL = [%s]",
+                              token, playlist_name, tracks_url ));
+    res.send( 'Error' );
+    return;
+  }
+
+  // https://developer.spotify.com/web-api/get-playlists-tracks/
+  get( token, tracks_url, function( response ){
+    console.log( response );
+    response = JSON.parse( response );
+    playlist = {
+      'name'  : playlist_name,
+      'tracks': _.map( response.items, function( item ){ return {
+        'album' : item.track.album.name,
+        'artist': item.track.artists[0].name,
+        'name'  : item.track.name
+      }})
+    }
+    console.log( playlist );
+    res.send( 'Ok' );
   });
 
-  if (( user_id === null ) || ( playlist_id === null ) || ( token === null )) {
-    console.log( "Missing parameters: user_id = [" + user_id + "], playlist_id = [" + playlist_id + "], token = [" + token + "]" )
-  } else {
-    // var archiver = require( 'archiver' );
-    // var zip      = archiver( 'zip' );
-    // zip.pipe( res );
-    // zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
-        // finalize();
-  }
+// http://stackoverflow.com/a/25210806/472153
+// res.writeHead( 200, { 'Content-Type':        'application/zip',
+                      // 'Content-disposition': 'attachment; filename=spotify-export.zip' });
+  // var archiver = require( 'archiver' );
+  // var zip      = archiver( 'zip' );
+  // zip.pipe( res );
+  // zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
+      // finalize();
 });
 
 
