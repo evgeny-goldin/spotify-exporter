@@ -129,38 +129,23 @@
             refresh_token = params.refresh_token,
             error         = params.error;
 
-        if (error) {
+        if ( error ) {
           alert('There was an error during the authentication');
         } else {
-          if (access_token) {
-            // render oauth info
-            oauthPlaceholder.innerHTML = oauthTemplate({
-              access_token:  access_token,
-              refresh_token: refresh_token
-            });
-
+          if ( access_token ) {
+            render( 'oauth', { access_token: access_token, refresh_token: refresh_token });
             display_user( access_token )
-
           } else {
-              // render initial screen
               $('#login').show();
               $('#loggedin').hide();
           }
 
-          document.getElementById('obtain-new-token').addEventListener('click', function() {
-            $.ajax({
-              url: '/refresh_token',
-              data: {
-                'refresh_token': refresh_token
-              }
-            }).done(function(data) {
-              access_token = data.access_token;
-              oauthPlaceholder.innerHTML = oauthTemplate({
-                access_token:  access_token,
-                refresh_token: refresh_token
-              });
+          elem( 'obtain-new-token' ).addEventListener( 'click', function() {
+            $.ajax({ url: '/refresh_token',
+                     data: { 'refresh_token': refresh_token }}).done( function( data ) {
+              render( 'oauth', { access_token: data.access_token, refresh_token: refresh_token });
             });
-          }, false);
+          }, false );
         }
       })();
     </script>
