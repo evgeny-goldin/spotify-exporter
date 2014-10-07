@@ -1,6 +1,6 @@
 {
   "author":      "Evgeny Goldin",
-  "name":        "Spotify Exporter",
+  "name":        "Spotify-Exporter",
   "description": "Application for exporting Spotify playlists",
   "version":     "0.0.1",
   "main":        "app.js",
