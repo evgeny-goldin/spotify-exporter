@@ -131,28 +131,27 @@ app.get( '/export', function( req, res ) {
 
   // https://developer.spotify.com/web-api/get-playlists-tracks/
   get( token, tracks_url, function( response ){
-    console.log( response );
     response = JSON.parse( response );
+    tracks   = _.map( response.items, function( item ){ return {
+      'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
+      'album'  : item.track.album.name,
+      'name'   : item.track.name
+    }})
+
     playlist = {
       'name'  : playlist_name,
-      'tracks': _.map( response.items, function( item ){ return {
-        'album' : item.track.album.name,
-        'artist': item.track.artists[0].name,
-        'name'  : item.track.name
-      }})
+      'tracks': tracks
     }
-    console.log( playlist );
-    res.send( 'Ok' );
-  });
 
-// http://stackoverflow.com/a/25210806/472153
-// res.writeHead( 200, { 'Content-Type':        'application/zip',
-                      // 'Content-disposition': 'attachment; filename=spotify-export.zip' });
-  // var archiver = require( 'archiver' );
-  // var zip      = archiver( 'zip' );
-  // zip.pipe( res );
-  // zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
-      // finalize();
+  // http://stackoverflow.com/a/25210806/472153
+  res.writeHead( 200, { 'Content-Type':        'application/zip',
+                        'Content-disposition': 'attachment; filename=' + playlist_name + '.zip' });
+  var archiver = require( 'archiver' );
+  var zip      = archiver( 'zip' );
+  zip.pipe( res );
+  zip.append( JSON.stringify( playlist, null, '  ' ), { name: playlist_name + '.json' }).
+      finalize();
+  });
 });
 
 
