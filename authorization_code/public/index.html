@@ -51,7 +51,7 @@
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
             <dt>Playlists</dt>
             {{#each playlists}}
-              <dd>[{{this.name}}][{{this.id}}][{{this.tracks.total}}]</dd>
+              <dd>{{this.name}} <em>(<a href="/export#id={{this.id}}">export</a>)</em></dd>
             {{/each}}
           </dl>
         </div>
