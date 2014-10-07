@@ -71,7 +71,7 @@ var send_zip_response = function( res, file_name, content ) {
 }
 
 
-var export_playlist = function( res, token, playlist_name, tracks_url, all_tracks ) {
+var export_playlist = function( res, token, playlist_name, playlist_url, tracks_url, all_tracks ) {
 
   if ( tracks_url != null ) {
     console.log( util.format( "Reading [%s]", tracks_url ))
@@ -81,7 +81,11 @@ var export_playlist = function( res, token, playlist_name, tracks_url, all_track
 
   if ( tracks_url === null ) {
     // Pagination is over
-    var playlist_json = JSON.stringify({ 'name': playlist_name, 'tracks': all_tracks }, null, '  ' );
+    var playlist_json = JSON.stringify({
+      'name':   playlist_name,
+      'url':    playlist_url,
+      'tracks': all_tracks
+    }, null, '  ' );
     send_zip_response( res, playlist_name, playlist_json );
   } else {
     // Pagination continues
@@ -93,7 +97,7 @@ var export_playlist = function( res, token, playlist_name, tracks_url, all_track
         'name'   : item.track.name
       }})
 
-      export_playlist( res, token, playlist_name, response.next, all_tracks.concat( tracks ))
+      export_playlist( res, token, playlist_name, playlist_url, response.next, all_tracks.concat( tracks ))
     })
   }
 }
@@ -159,16 +163,17 @@ app.get( '/export', function( req, res ) {
 
   var token         = param( req, 'token'  );
   var playlist_name = param( req, 'name'   );
+  var playlist_url  = param( req, 'url'    );
   var tracks_url    = param( req, 'tracks' );
 
-  if (( token === null ) || ( playlist_name === null ) || ( tracks_url === null )) {
-    console.log( util.format( "Missing parameters: token = [%s], playlist name = [%s], tracks URL = [%s]",
-                              token, playlist_name, tracks_url ));
+  if (( token === null ) || ( playlist_name === null ) || ( playlist_url === null ) || ( tracks_url === null )) {
+    console.log( util.format( "Missing parameters: token = [%s], playlist name = [%s], playlist URL = [%s], tracks URL = [%s]",
+                              token, playlist_name, playlist_url, tracks_url ));
     res.send( 'Error' );
     return;
   }
 
-  export_playlist( res, token, playlist_name, tracks_url, [] )
+  export_playlist( res, token, playlist_name, playlist_url, tracks_url, [] )
 });
 
 
