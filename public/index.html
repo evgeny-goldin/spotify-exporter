@@ -13,6 +13,13 @@
         white-space: nowrap;
         width: 500px;
       }
+      body {
+        font-family: proxima_nova,"Helvetica Neue",Helvetica,Arial,sans-serif;
+        font-size:   16px;
+        line-height: 1.5;
+        color:       #2e2f33;
+        background-color:#f8f8f8
+      }
     </style>
   </head>
 
@@ -30,19 +37,19 @@
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1>Hello, {{display_name}}</h1>
-      <div class="media">
+      <div class="media" style="margin-top: 5%">
         <div class="pull-left">
           <img class="media-object" width="150" src="{{images.0.url}}" />
         </div>
         <div class="media-body">
           <dl class="dl-horizontal">
             <!-- https://developer.spotify.com/web-api/get-current-users-profile/ -->
+            <dt>User</dt><dd>{{display_name}}</dd>
             <dt>Email</dt><dd>{{email}}</dd>
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
             <dt>Playlists</dt>
             {{#each playlists}}
-              <dd>{{this.name}} <em>(<a href="/export?user={{../id}}&amp;id={{this.id}}&amp;token={{../access_token}}">export</a>)</em></dd>
+              <dd class="text-overflow"><a href="{{this.external_urls.spotify}}">{{this.name}}</a> - {{this.tracks.total}} tracks <em>(<a href="/export?user={{../id}}&amp;id={{this.id}}&amp;token={{../access_token}}">export</a>)</em></dd>
             {{/each}}
           </dl>
         </div>
@@ -53,19 +60,20 @@
     <script>
       (function() {
 
-        /**
-         * Obtains parameters from the hash of the URL
-         * @return Object
-         */
-        function getHashParams() {
-          var hashParams = {};
+        function getParams() {
+          var params = {};
           var e, r = /([^&;=]+)=?([^&;]*)/g,
-              q = window.location.hash.substring(1);
+              q    = window.location.hash.substring(1);
           while ( e = r.exec(q)) {
-             hashParams[e[1]] = decodeURIComponent(e[2]);
+             params[e[1]] = decodeURIComponent(e[2]);
           }
-          return hashParams;
+          return params;
         }
+
+        var params        = getParams();
+        var access_token  = params.access_token;
+        var refresh_token = params.refresh_token;
+        var error         = params.error;
 
         function elem( id ) {
           return document.getElementById( id )
@@ -75,42 +83,34 @@
           elem( container_id ).innerHTML = Handlebars.compile( elem( container_id + '-template' ).innerHTML )( template_context );
         }
 
-        function display_user( access_token ) {
+        function get( url, handler ) {
           $.ajax({
-              url:     'https://api.spotify.com/v1/me',
+              url:     'https://api.spotify.com/v1' + url,
               headers: { 'Authorization': 'Bearer ' + access_token },
-              success: function( response ) {
-                render( 'user-profile', response )
-                display_playlists( access_token, response );
-                $('#login').hide();
-                $('#loggedin').show();
-              }
+              success: handler
           });
         }
 
-        function display_playlists( access_token, user_profile ) {
-          $.ajax({ url:     'https://api.spotify.com/v1/users/' + user_profile.id + '/playlists',
-                   headers: { 'Authorization': 'Bearer ' + access_token },
-                   success: function( response ) {
-                     render( 'user-profile', $.extend( user_profile, { "playlists": response.items, "access_token": access_token } ));
-                   }
+        function display_user( access_token ) {
+          get( '/me', function( response ){
+            var user_profile = response;
+            render( 'user-profile', user_profile )
+            get ( '/users/' + user_profile.id + '/playlists', function( response ){
+              render( 'user-profile', $.extend( user_profile, { "playlists"   : response.items,
+                                                                "access_token": access_token }));
+            });
+            $('#login').hide();
+            $('#loggedin').show();
           });
         }
-
-        var params        = getHashParams();
-        var access_token  = params.access_token
-            refresh_token = params.refresh_token,
-            error         = params.error;
 
         if ( error ) {
           alert('There was an error during the authentication');
+        } else if ( access_token ) {
+          display_user( access_token )
         } else {
-          if ( access_token ) {
-            display_user( access_token )
-          } else {
-              $('#login').show();
-              $('#loggedin').hide();
-          }
+          $('#login').show();
+          $('#loggedin').hide();
         }
       })();
     </script>
