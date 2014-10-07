@@ -51,7 +51,7 @@
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
             <dt>Playlists</dt>
             {{#each playlists}}
-              <dd>{{this.name}} <em>(<a href="/export#id={{this.id}}">export</a>)</em></dd>
+              <dd>{{this.name}} <em>(<a href="/export?id={{this.id}}&amp;token={{../access_token}}">export</a>)</em></dd>
             {{/each}}
           </dl>
         </div>
@@ -66,8 +66,8 @@
       </dl>
     </script>
 
-    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
-    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script>
       (function() {
 
@@ -89,8 +89,12 @@
           return document.getElementById( id )
         }
 
-        function template( id ) {
-          return Handlebars.compile( elem( id ).innerHTML )
+        function template( template_id ) {
+          return Handlebars.compile( elem( template_id ).innerHTML )
+        }
+
+        function render( container_id, template_context ) {
+          elem( container_id ).innerHTML = template( container_id + '-template' )( template_context );
         }
 
         function display_user( access_token ) {
@@ -98,7 +102,7 @@
               url:     'https://api.spotify.com/v1/me',
               headers: { 'Authorization': 'Bearer ' + access_token },
               success: function( response ) {
-                userProfilePlaceholder.innerHTML = userProfileTemplate( response );
+                render( 'user-profile', response )
                 display_playlists( access_token, response );
                 $('#login').hide();
                 $('#loggedin').show();
@@ -110,7 +114,7 @@
           $.ajax({ url:     'https://api.spotify.com/v1/users/' + user_profile.id + '/playlists',
                    headers: { 'Authorization': 'Bearer ' + access_token },
                    success: function( response ) {
-                     userProfilePlaceholder.innerHTML = userProfileTemplate( $.extend( user_profile, { "playlists": response.items } ));
+                     render( 'user-profile', $.extend( user_profile, { "playlists": response.items, "access_token": access_token } ));
                    }
           });
         }
@@ -131,7 +135,7 @@
           if (access_token) {
             // render oauth info
             oauthPlaceholder.innerHTML = oauthTemplate({
-              access_token: access_token,
+              access_token:  access_token,
               refresh_token: refresh_token
             });
 
@@ -152,7 +156,7 @@
             }).done(function(data) {
               access_token = data.access_token;
               oauthPlaceholder.innerHTML = oauthTemplate({
-                access_token: access_token,
+                access_token:  access_token,
                 refresh_token: refresh_token
               });
             });

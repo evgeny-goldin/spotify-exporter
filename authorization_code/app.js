@@ -45,17 +45,6 @@ var redirect = function( res, url, params ) {
 app.use(express.static(__dirname + '/public'))
    .use(cookieParser());
 
-app.get( '/export', function( req, res ) {
-  res.writeHead( 200, { 'Content-Type':        'application/zip',
-                        'Content-disposition': 'attachment; filename=export.zip' });
-
-  var archiver = require( 'archiver' );
-  var zip      = archiver( 'zip' );
-  zip.pipe( res );
-  zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
-      finalize();
-});
-
 
 app.get( '/login', function( req, res ) {
 
@@ -78,24 +67,24 @@ app.get( '/callback', function( req, res ) {
   var state       = req.query.state || null;
   var storedState = req.cookies ? req.cookies[stateKey] : null;
 
-  if (state === null || state !== storedState) {
+  if (( state === null ) || ( state !== storedState )) {
     redirect( res, '/#', { error: 'state_mismatch' });
   } else {
-    res.clearCookie(stateKey);
+    res.clearCookie( stateKey );
     var authOptions = {
       url: 'https://accounts.spotify.com/api/token',
       form: {
-        code: code,
-        redirect_uri: redirect_uri,
-        grant_type: 'authorization_code',
-        client_id: client_id,
+        code:          code,
+        redirect_uri:  redirect_uri,
+        grant_type:    'authorization_code',
+        client_id:     client_id,
         client_secret: client_secret
       },
       json: true
     };
 
-    request.post(authOptions, function(error, response, body) {
-      if (!error && response.statusCode === 200) {
+    request.post( authOptions, function( error, response, body ) {
+      if (( !error ) && ( response.statusCode === 200 )) {
 
         var access_token  = body.access_token,
             refresh_token = body.refresh_token;
@@ -115,9 +104,9 @@ app.get( '/refresh_token', function( req, res ) {
   var refresh_token = req.query.refresh_token;
   var authOptions = {
     url: 'https://accounts.spotify.com/api/token',
-    headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString( 'base64')) },
+    headers: { 'Authorization': 'Basic ' + ( new Buffer( client_id + ':' + client_secret ).toString( 'base64' )) },
     form: {
-      grant_type: 'refresh_token',
+      grant_type:    'refresh_token',
       refresh_token: refresh_token
     },
     json: true
@@ -132,6 +121,26 @@ app.get( '/refresh_token', function( req, res ) {
     }
   });
 });
+
+
+app.get( '/export', function( req, res ) {
+  // http://stackoverflow.com/a/25210806/472153
+  res.writeHead( 200, { 'Content-Type':        'application/zip',
+                        'Content-disposition': 'attachment; filename=export.zip' });
+
+  var id       = req.query.id    || null;
+  var token    = req.query.token || null;
+
+  console.log( id )
+  console.log( token )
+
+  var archiver = require( 'archiver' );
+  var zip      = archiver( 'zip' );
+  zip.pipe( res );
+  zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
+      finalize();
+});
+
 
 console.log( 'http://127.0.0.1:8080' );
 app.listen( 8080 );
