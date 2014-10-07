@@ -18,9 +18,10 @@
 
   <body>
     <div class="container">
-      <div id="login">
-        <h1>This is an example of the Authorization Code flow</h1>
-        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+      <div id="login" style="margin-top:20%">
+        <center>
+          <a href="/login"><img src="spotify.webp"></img></a>
+        </center>
       </div>
       <div id="loggedin">
         <div id="user-profile">
@@ -29,7 +30,7 @@
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1>Logged in as {{display_name}}</h1>
+      <h1>Hello, {{display_name}}</h1>
       <div class="media">
         <div class="pull-left">
           <img class="media-object" width="150" src="{{images.0.url}}" />
@@ -37,18 +38,11 @@
         <div class="media-body">
           <dl class="dl-horizontal">
             <!-- https://developer.spotify.com/web-api/get-current-users-profile/ -->
-            <dt>Display name</dt><dd class="clearfix">{{display_name}}</dd>
-            <dt>Id</dt><dd>{{id}}</dd>
-            <dt>Product</dt><dd>{{product}}</dd>
             <dt>Email</dt><dd>{{email}}</dd>
-            <dt>Spotify URI</dt><dd><a href="{{external_urls.spotify}}">{{external_urls.spotify}}</a></dd>
-            <dt>Link</dt><dd><a href="{{href}}">{{href}}</a></dd>
-            <dt>Profile Image</dt><dd class="clearfix"><a href="{{images.0.url}}">{{images.0.url}}</a></dd>
-            <dt>Country</dt><dd>{{country}}</dd>
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
             <dt>Playlists</dt>
             {{#each playlists}}
-              <dd>{{this.name}} <em>(<a href="/export?id={{this.id}}&amp;token={{../access_token}}">export</a>)</em></dd>
+              <dd>{{this.name}} <em>(<a href="/export?user={{../id}}&amp;id={{this.id}}&amp;token={{../access_token}}">export</a>)</em></dd>
             {{/each}}
           </dl>
         </div>
@@ -77,12 +71,8 @@
           return document.getElementById( id )
         }
 
-        function template( template_id ) {
-          return Handlebars.compile( elem( template_id ).innerHTML )
-        }
-
         function render( container_id, template_context ) {
-          elem( container_id ).innerHTML = template( container_id + '-template' )( template_context );
+          elem( container_id ).innerHTML = Handlebars.compile( elem( container_id + '-template' ).innerHTML )( template_context );
         }
 
         function display_user( access_token ) {

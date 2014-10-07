@@ -84,7 +84,7 @@ app.get( '/callback', function( req, res ) {
     };
 
     request.post( authOptions, function( error, response, body ) {
-      if (( !error ) && ( response.statusCode === 200 )) {
+      if (( ! error ) && ( response.statusCode === 200 )) {
 
         var access_token  = body.access_token,
             refresh_token = body.refresh_token;
@@ -128,17 +128,19 @@ app.get( '/export', function( req, res ) {
   res.writeHead( 200, { 'Content-Type':        'application/zip',
                         'Content-disposition': 'attachment; filename=export.zip' });
 
-  var id       = req.query.id    || null;
-  var token    = req.query.token || null;
+  var user_id     = req.query.user  || null;
+  var playlist_id = req.query.id    || null;
+  var token       = req.query.token || null;
 
-  console.log( id )
-  console.log( token )
-
-  var archiver = require( 'archiver' );
-  var zip      = archiver( 'zip' );
-  zip.pipe( res );
-  zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
-      finalize();
+  if (( user_id === null ) || ( playlist_id === null ) || ( token === null )) {
+    console.log( "Missing parameters: user_id = [" + user_id + "], playlist_id = [" + playlist_id + "], token = [" + token + "]" )
+  } else {
+    var archiver = require( 'archiver' );
+    var zip      = archiver( 'zip' );
+    zip.pipe( res );
+    zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
+        finalize();
+  }
 });
 
 
