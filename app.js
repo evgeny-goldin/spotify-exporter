@@ -60,6 +60,45 @@ var get = function( access_token, url, handler ) {
 }
 
 
+var send_zip_response = function( res, file_name, content ) {
+  // http://stackoverflow.com/a/25210806/472153
+  res.writeHead( 200, { 'Content-Type':        'application/zip',
+                        'Content-disposition': 'attachment; filename="' + file_name + '.zip"' });
+  var archiver = require( 'archiver' );
+  var zip      = archiver( 'zip' );
+  zip.pipe( res );
+  zip.append( content, { name: file_name + '.json' }).finalize();
+}
+
+
+var export_playlist = function( res, token, playlist_name, tracks_url, all_tracks ) {
+
+  if ( tracks_url != null ) {
+    console.log( util.format( "Reading [%s]", tracks_url ))
+  } else {
+    console.log( util.format( "Sending playlist '%s' with %s tracks", playlist_name, all_tracks.length ))
+  }
+
+  if ( tracks_url === null ) {
+    // Pagination is over
+    var playlist_json = JSON.stringify({ 'name': playlist_name, 'tracks': all_tracks }, null, '  ' );
+    send_zip_response( res, playlist_name, playlist_json );
+  } else {
+    // Pagination continues
+    get( token, tracks_url, function( response ){
+      response = JSON.parse( response );
+      tracks   = _.map( response.items, function( item ){ return {
+        'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
+        'album'  : item.track.album.name,
+        'name'   : item.track.name
+      }})
+
+      export_playlist( res, token, playlist_name, response.next, all_tracks.concat( tracks ))
+    })
+  }
+}
+
+
 app.use( express.static( __dirname + '/public' )).use( cookieParser());
 
 
@@ -129,29 +168,7 @@ app.get( '/export', function( req, res ) {
     return;
   }
 
-  // https://developer.spotify.com/web-api/get-playlists-tracks/
-  get( token, tracks_url, function( response ){
-    response = JSON.parse( response );
-    tracks   = _.map( response.items, function( item ){ return {
-      'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
-      'album'  : item.track.album.name,
-      'name'   : item.track.name
-    }})
-
-    playlist = {
-      'name'  : playlist_name,
-      'tracks': tracks
-    }
-
-  // http://stackoverflow.com/a/25210806/472153
-  res.writeHead( 200, { 'Content-Type':        'application/zip',
-                        'Content-disposition': 'attachment; filename=' + playlist_name + '.zip' });
-  var archiver = require( 'archiver' );
-  var zip      = archiver( 'zip' );
-  zip.pipe( res );
-  zip.append( JSON.stringify( playlist, null, '  ' ), { name: playlist_name + '.json' }).
-      finalize();
-  });
+  export_playlist( res, token, playlist_name, tracks_url, [] )
 });
 
 
