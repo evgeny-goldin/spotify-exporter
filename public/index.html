@@ -1,9 +1,16 @@
 <!doctype html>
 <html>
   <head>
-    <title>Example of the Authorization Code flow with Spotify</title>
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <title>Spotify Exporter</title>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
     <style type="text/css">
+      body {
+        font-family: proxima_nova,"Helvetica Neue",Helvetica,Arial,sans-serif;
+        font-size:   16px;
+        line-height: 1.5;
+        color:       #2e2f33;
+        background-color:#f8f8f8
+      }
       #login, #loggedin {
         display: none;
       }
@@ -13,31 +20,23 @@
         white-space: nowrap;
         width: 500px;
       }
-      body {
-        font-family: proxima_nova,"Helvetica Neue",Helvetica,Arial,sans-serif;
-        font-size:   16px;
-        line-height: 1.5;
-        color:       #2e2f33;
-        background-color:#f8f8f8
-      }
     </style>
   </head>
 
   <body>
-    <div class="container">
-      <div id="login" style="margin-top:20%">
+    <div class="container" style="margin-top: 5%">
+      <div id="login">
         <center>
-          <a href="/login"><img src="spotify.webp"></img></a>
+          <a href="/login"><img src="./spotify.webp"></img></a>
         </center>
       </div>
       <div id="loggedin">
-        <div id="user-profile">
-        </div>
+        <div id="user-profile"></div>
       </div>
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <div class="media" style="margin-top: 5%">
+      <div class="media">
         <div class="pull-left">
           <img class="media-object" width="150" src="{{images.0.url}}" />
         </div>
@@ -80,6 +79,7 @@
         }
 
         function render( container_id, template_context ) {
+          // http://handlebarsjs.com/
           elem( container_id ).innerHTML = Handlebars.compile( elem( container_id + '-template' ).innerHTML )( template_context );
         }
 
@@ -92,9 +92,11 @@
         }
 
         function display_user( access_token ) {
+          // https://developer.spotify.com/web-api/get-current-users-profile/
           get( '/me', function( response ){
             var user_profile = response;
             render( 'user-profile', user_profile )
+            // https://developer.spotify.com/web-api/get-list-users-playlists/
             get ( '/users/' + user_profile.id + '/playlists', function( response ){
               render( 'user-profile', $.extend( user_profile, { "playlists"   : response.items,
                                                                 "access_token": access_token }));
@@ -105,12 +107,12 @@
         }
 
         if ( error ) {
-          alert('There was an error during the authentication');
+          alert( 'There was an error during the authentication' );
         } else if ( access_token ) {
-          display_user( access_token )
+          display_user( access_token );
         } else {
-          $('#login').show();
-          $('#loggedin').hide();
+          $( '#login' ).show();
+          $( '#loggedin' ).hide();
         }
       })();
     </script>

@@ -12,6 +12,7 @@ var request       = require( 'request'); // "Request" library
 var querystring   = require( 'querystring');
 var cookieParser  = require( 'cookie-parser');
 var fs            = require( 'fs');
+var http          = require( 'http');
 var app           = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
 var client_id     = app['client']['id'];
 var client_secret = app['client']['secret'];
@@ -26,7 +27,7 @@ var app           = express();
  * @param  {number} length The length of the string
  * @return {string} The generated string
  */
-var generateRandomString = function(length) {
+var generateRandomString = function( length ) {
   var text     = '';
   var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -39,6 +40,22 @@ var generateRandomString = function(length) {
 
 var redirect = function( res, url, params ) {
   res.redirect( url + querystring.stringify( params ));
+}
+
+
+var get = function( access_token, url, handler ) {
+
+  var request_url = 'https://api.spotify.com/v1' + url
+  var options     = { headers: { 'Authorization': 'Bearer ' + access_token }};
+
+  request.get( request_url, options, function( error, response, body ){
+    if (( ! error ) && ( response.statusCode === 200 )) {
+      handler( body )
+    } else {
+      console.log( "Failed to send GET request to '" + request_url + "', status code is " + response.statusCode )
+      console.log( body )
+    }
+  });
 }
 
 
@@ -98,30 +115,6 @@ app.get( '/callback', function( req, res ) {
   }
 });
 
-app.get( '/refresh_token', function( req, res ) {
-
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  var authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    headers: { 'Authorization': 'Basic ' + ( new Buffer( client_id + ':' + client_secret ).toString( 'base64' )) },
-    form: {
-      grant_type:    'refresh_token',
-      refresh_token: refresh_token
-    },
-    json: true
-  };
-
-  request.post(authOptions, function(error, response, body) {
-    if (!error && response.statusCode === 200) {
-      var access_token = body.access_token;
-      res.send({
-        'access_token': access_token
-      });
-    }
-  });
-});
-
 
 app.get( '/export', function( req, res ) {
   // http://stackoverflow.com/a/25210806/472153
@@ -132,14 +125,18 @@ app.get( '/export', function( req, res ) {
   var playlist_id = req.query.id    || null;
   var token       = req.query.token || null;
 
+  get( token, '/me', function( response ){
+    console.log( response )
+  });
+
   if (( user_id === null ) || ( playlist_id === null ) || ( token === null )) {
     console.log( "Missing parameters: user_id = [" + user_id + "], playlist_id = [" + playlist_id + "], token = [" + token + "]" )
   } else {
-    var archiver = require( 'archiver' );
-    var zip      = archiver( 'zip' );
-    zip.pipe( res );
-    zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
-        finalize();
+    // var archiver = require( 'archiver' );
+    // var zip      = archiver( 'zip' );
+    // zip.pipe( res );
+    // zip.append( 'Some text to go in file 1.', { name: '1.txt' }).
+        // finalize();
   }
 });
 
