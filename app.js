@@ -6,8 +6,8 @@ var request         = require( 'request' );
 var cookieParser    = require( 'cookie-parser' );
 var util            = require( 'util' );
 var _               = require( 'underscore' );
-var u               = require( './utils' );
-var hu              = require( './http-utils' );
+var u               = require( './utils/utils' );
+var hu              = require( './utils/http-utils' );
 
 var app             = express();
 var app_data        = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
