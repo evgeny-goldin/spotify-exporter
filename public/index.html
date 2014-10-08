@@ -48,7 +48,7 @@
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
             <dt>Playlists</dt>
             {{#each playlists}}
-              <dd class="text-overflow"><a href="/export?token={{../access_token}}&amp;url={{this.external_urls.spotify}}&amp;name={{this.name}}&amp;tracks={{this.tracks.href}}">{{this.name}}</a> - {{this.tracks.total}} tracks</dd>
+              <dd class="text-overflow"><a href="/export?t={{../access_token}}&amp;u={{owner.id}}&amp;p={{id}}">{{this.name}}</a> - {{this.tracks.total}} tracks</dd>
             {{/each}}
           </dl>
         </div>

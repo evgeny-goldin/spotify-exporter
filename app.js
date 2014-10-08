@@ -1,3 +1,4 @@
+"use strict";
 
 var express       = require( 'express' );
 var fs            = require( 'fs');
@@ -84,19 +85,17 @@ app.get( '/callback', function( req, res ) {
  */
 app.get( '/export', function( req, res ) {
 
-  var token         = u.param( req, 'token'  );
-  var playlist_name = u.param( req, 'name'   );
-  var playlist_url  = u.param( req, 'url'    );
-  var tracks_url    = u.param( req, 'tracks' );
+  var token       = u.param( req, 't' );
+  var user_id     = u.param( req, 'u' );
+  var playlist_id = u.param( req, 'p' );
 
-  if (( token === null ) || ( playlist_name === null ) || ( playlist_url === null ) || ( tracks_url === null )) {
-    console.log( util.format( "Missing parameters: token = [%s], playlist name = [%s], playlist URL = [%s], tracks URL = [%s]",
-                              token, playlist_name, playlist_url, tracks_url ));
+  if (( token === null ) || ( user_id === null ) || ( playlist_id === null )) {
+    console.log( util.format( "Missing parameters in 'export' request: token = [%s], user ID = [%s], playlist ID = [%s]",
+                              token, user_id, playlist_id ));
     res.send( 'Error' );
-    return;
+  } else {
+    u.export_playlist( res, token, user_id, playlist_id )
   }
-
-  u.export_playlist( res, token, playlist_name, playlist_url, tracks_url, [] )
 });
 
 

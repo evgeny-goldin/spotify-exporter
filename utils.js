@@ -1,3 +1,5 @@
+"use strict";
+
 var request       = require( 'request' );
 var _             = require( 'underscore' );
 var querystring   = require( 'querystring' );
@@ -44,38 +46,59 @@ exports.param = function( req, name ){
 
 /**
  * Exports a playlist specified by sending it in a ZIP response.
- * @param {res}           response to send ZIP to
- * @param {token}         access token
- * @param {playlist_name} name of the playlist
- * @param {playlist_url}  playlist URL to open in a Web player
- * @param {tracks_url}    URL to fetch playlist tracks
- * @param {tracks}        Array of playlist tracks, accumulated so far
+ * @param {res}          response to send ZIP to
+ * @param {token}        access token
+ * @param {user_id}      user ID of playlist owner
+ * @param {playlist_id}  playlist ID
  */
-exports.export_playlist = function( res, token, playlist_name, playlist_url, tracks_url, tracks ) {
+exports.export_playlist = function( res, token, user_id, playlist_id ) {
+
+  // https://developer.spotify.com/web-api/get-playlist/
+
+  get( token,
+       util.format( 'https://api.spotify.com/v1/users/%s/playlists/%s', user_id, playlist_id ),
+       function( response ){
+
+    var playlist = {
+      'name'  : response.name,
+      'url'   : response.external_urls.spotify,
+      'owner' : response.owner.id,
+      'tracks': read_tracks( response.tracks.items )
+    }
+
+    export_playlist_paginate( res, token, playlist, response.tracks.next );
+  });
+}
+
+
+var export_playlist_paginate = function( res, token, playlist, tracks_url ) {
 
   if ( tracks_url === null ) {
     // Pagination is over, no more tracks to fetch
-    console.log( util.format( "Sending playlist '%s' with %s tracks", playlist_name, tracks.length ))
-    var playlist = JSON.stringify({
-      'name':   playlist_name,
-      'url':    playlist_url,
-      'tracks': tracks
-    }, null, '  ' );
-    send_zip_response( res, playlist_name, playlist );
+    console.log( util.format( "Sending playlist '%s' with %s tracks", playlist.name, playlist.tracks.length ))
+    send_zip_response( res, playlist.name, JSON.stringify( playlist, null, '  ' ));
   } else {
     // Pagination continues, there are more tracks to fetch
-    console.log( util.format( "Reading [%s]", tracks_url ))
     get( token, tracks_url, function( response ){
-      // https://developer.spotify.com/web-api/get-playlists-tracks/
-      var new_tracks = _.map( response.items, function( item ){ return {
-        'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
-        'album'  : item.track.album.name,
-        'name'   : item.track.name
-      }})
-
-      exports.export_playlist( res, token, playlist_name, playlist_url, response.next, tracks.concat( new_tracks ))
+      playlist.tracks = playlist.tracks.concat( read_tracks( response.items ))
+      export_playlist_paginate( res, token, playlist, response.next )
     })
   }
+}
+
+
+var read_tracks = function ( track_items ) {
+  // https://developer.spotify.com/web-api/get-playlists-tracks/
+  return _.map( track_items, function( item ){
+    var track = item.track;
+    return {
+      'uri'     : track.uri,
+      'preview' : track.preview_url,
+      'name'    : track.name,
+      'album'   : track.album.name,
+      'artists' : _.map( track.artists, function( artist ){ return artist.name }).join( ', ' )
+    }
+  })
 }
 
 
@@ -87,6 +110,8 @@ exports.export_playlist = function( res, token, playlist_name, playlist_url, tra
  */
 var get = function( access_token, url, handler ) {
 
+  console.log( util.format( "GET: [%s]", url ));
+
   // https://www.npmjs.org/package/request
 
   request.get( url,
@@ -95,7 +120,7 @@ var get = function( access_token, url, handler ) {
     if (( ! error ) && ( response.statusCode === 200 )) {
       handler( body )
     } else {
-      console.log( "Failed to send GET request to '" + url + "', status code is " + response.statusCode )
+      console.log( util.format( "Failed to send GET request to '%s', status code is %s", url, response.statusCode ))
       if ( error ){ console.log( error ) }
       console.log( body )
     }
