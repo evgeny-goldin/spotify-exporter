@@ -29,9 +29,10 @@ exports.export_playlist = function( res, token, user_id, playlist_id, callback )
           playlists_reported[ playlists_json.uri ] = playlists_json
           var reported                             = Object.keys( playlists_reported ).length
           console.log( util.format( "%s playlists out of %s reported", reported, playlists.length ));
-          
+
           if ( reported == playlists.length ) {
 
+            // Calculating array of playlists lengths (each element is some playlist's length) and summing it up
             var playlist_lengths = _.map( playlists_reported,  function( playlists_json ){ return playlists_json.tracks.length });
             var tracks           = _.reduce( playlist_lengths, function( sum, size ){ return sum + size });
 
