@@ -66,7 +66,6 @@ exports.export_playlist = function( res, token, playlist_name, playlist_url, tra
     // Pagination continues, there are more tracks to fetch
     console.log( util.format( "Reading [%s]", tracks_url ))
     get( token, tracks_url, function( response ){
-      response = JSON.parse( response );
       // https://developer.spotify.com/web-api/get-playlists-tracks/
       var new_tracks = _.map( response.items, function( item ){ return {
         'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
@@ -91,7 +90,7 @@ var get = function( access_token, url, handler ) {
   // https://www.npmjs.org/package/request
 
   request.get( url,
-               { headers: { 'Authorization': 'Bearer ' + access_token }},
+               { headers: { 'Authorization': 'Bearer ' + access_token }, json: true },
                function( error, response, body ){
     if (( ! error ) && ( response.statusCode === 200 )) {
       handler( body )
