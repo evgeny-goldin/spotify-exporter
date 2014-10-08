@@ -76,7 +76,7 @@ var export_playlist = function( res, token, user_id, playlist_id, callback ) {
       'id'          : response.id,
       'url'         : response.external_urls.spotify,
       'uri'         : response.uri,
-      'owner'       : response.owner.id,
+      'owner'       : 'spotify:user:' + response.owner.id,
       'exported_on' : new Date().toUTCString(),
       'total_tracks': response.tracks.items.length,
       'tracks'      : read_tracks( response.tracks.items )
