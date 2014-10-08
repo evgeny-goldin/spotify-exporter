@@ -111,12 +111,12 @@ var read_tracks = function ( track_items ) {
   return _.map( track_items, function( item ){
     var track = item.track;
     return {
-      'uri'     : track.uri,
-      'preview' : track.preview_url,
       'name'    : track.name,
       'album'   : track.album.name,
       'artists' : _.map( track.artists, function( artist ){ return artist.name }).join( ', ' ),
-      'duration': duration( track.duration_ms )
+      'duration': duration( track.duration_ms ),
+      'uri'     : track.uri,
+      'preview' : track.preview_url
     }
   })
 }
