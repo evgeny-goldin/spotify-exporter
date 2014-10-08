@@ -27,9 +27,16 @@ exports.export_playlist = function( res, token, user_id, playlist_id, callback )
       _.each( playlists, function( playlist ){
         exports.export_playlist( res, token, playlist.owner.id, playlist.id, function( playlists_json ){
           playlists_reported[ playlists_json.uri ] = playlists_json
-          if ( Object.keys( playlists_reported ).length == playlists.length ) {
-            console.log( util.format( "%s playlists with X tracks fetched in %s ms",
-                                      playlists.length, elapsed_time( start_time )));
+          var reported                             = Object.keys( playlists_reported ).length
+          console.log( util.format( "%s playlists out of %s reported", reported, playlists.length ));
+          
+          if ( reported == playlists.length ) {
+
+            var playlist_lengths = _.map( playlists_reported,  function( playlists_json ){ return playlists_json.tracks.length });
+            var tracks           = _.reduce( playlist_lengths, function( sum, size ){ return sum + size });
+
+            console.log( util.format( "%s tracks of %s playlists fetched in %s ms",
+                                      tracks, playlists.length, elapsed_time( start_time )));
           }
         });
       });

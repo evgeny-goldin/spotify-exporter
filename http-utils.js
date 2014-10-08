@@ -57,8 +57,7 @@ exports.playlist_url = function( user_id, playlist_id ) {
  */
 exports.get = function( access_token, url, handler ) {
 
-  console.log( util.format( "GET: [%s]", url ));
-
+  // console.log( util.format( "GET: [%s]", url ));
   // https://www.npmjs.org/package/request
 
   request.get( url,
