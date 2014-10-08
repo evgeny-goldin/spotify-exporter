@@ -46,7 +46,7 @@
             <dt>User</dt><dd>{{display_name}}</dd>
             <dt>Email</dt><dd>{{email}}</dd>
             <!-- https://developer.spotify.com/web-api/get-list-users-playlists/ -->
-            <dt>Playlists</dt>
+            <dt><a href="/export?t={{access_token}}&amp;u={{id}}">Playlists</a></dt>
             {{#each playlists}}
               <dd class="text-overflow"><a href="/export?t={{../access_token}}&amp;u={{owner.id}}&amp;p={{id}}">{{this.name}}</a> - {{this.tracks.total}} tracks</dd>
             {{/each}}

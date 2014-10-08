@@ -1,19 +1,34 @@
 "use strict";
 
-var express       = require( 'express' );
-var fs            = require( 'fs');
-var request       = require( 'request' );
-var cookieParser  = require( 'cookie-parser' );
-var util          = require( 'util' );
-var u             = require( './utils' );
+var express         = require( 'express' );
+var fs              = require( 'fs');
+var request         = require( 'request' );
+var cookieParser    = require( 'cookie-parser' );
+var util            = require( 'util' );
+var _               = require( 'underscore' );
+var u               = require( './utils' );
+var hu              = require( './http-utils' );
 
-var app           = express();
-var app_data      = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
-var client_id     = app_data['client']['id'];
-var client_secret = app_data['client']['secret'];
-var redirect_uri  = app_data['client']['redirect_uri'];
-var stateKey      = 'spotify_auth_state';
-var scope         = 'user-read-private user-read-email playlist-read-private';
+var app             = express();
+var app_data        = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
+var client_id       = app_data['client']['id'];
+var client_secret   = app_data['client']['secret'];
+var redirect_uri    = app_data['client']['redirect_uri'];
+var stateKey        = 'spotify_auth_state';
+var scope           = 'user-read-private user-read-email playlist-read-private';
+var random_possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789АБВГДейка';
+
+/**
+ * Generates a random string containing numbers and letters
+ * @param  {number} length The length of the string
+ * @return {string} The generated string
+ */
+var randomString = function( length ) {
+  return _.times( length, function(){
+    // Create an array of N random letters, then join them all with ''
+    return random_possible.charAt( Math.floor( Math.random() * random_possible.length ))
+  }).join( '' );
+}
 
 
 app.use( express.static( __dirname + '/public' )).use( cookieParser());
@@ -25,10 +40,10 @@ app.use( express.static( __dirname + '/public' )).use( cookieParser());
  */
 app.get( '/login', function( req, res ) {
 
-  var state = u.randomString( 64 );
+  var state = randomString( 64 );
   res.cookie( stateKey, state );
 
-  u.redirect( res, 'https://accounts.spotify.com/authorize?', {
+  hu.redirect( res, 'https://accounts.spotify.com/authorize?', {
     response_type: 'code',
     client_id:     client_id,
     scope:         scope,
@@ -49,7 +64,7 @@ app.get( '/callback', function( req, res ) {
   var storedState = req.cookies ? req.cookies[stateKey] : null;
 
   if (( state === null ) || ( state !== storedState )) {
-    u.redirect( res, '/#', { error: 'state_mismatch' });
+    hu.redirect( res, '/#', { error: 'state_mismatch' });
   } else {
     res.clearCookie( stateKey );
     var authOptions = {
@@ -70,9 +85,9 @@ app.get( '/callback', function( req, res ) {
         var access_token  = body.access_token;
         var refresh_token = body.refresh_token;
 
-        u.redirect( res, '/#', { access_token: access_token, refresh_token: refresh_token });
+        hu.redirect( res, '/#', { access_token: access_token, refresh_token: refresh_token });
       } else {
-        u.redirect( res, '/#', { error: 'invalid_token' });
+        hu.redirect( res, '/#', { error: 'invalid_token' });
       }
     });
   }
@@ -85,13 +100,12 @@ app.get( '/callback', function( req, res ) {
  */
 app.get( '/export', function( req, res ) {
 
-  var token       = u.param( req, 't' );
-  var user_id     = u.param( req, 'u' );
-  var playlist_id = u.param( req, 'p' );
+  var token       = hu.param( req, 't' );
+  var user_id     = hu.param( req, 'u' );
+  var playlist_id = hu.param( req, 'p' ); // null for "all playlists"
 
-  if (( token === null ) || ( user_id === null ) || ( playlist_id === null )) {
-    console.log( util.format( "Missing parameters in 'export' request: token = [%s], user ID = [%s], playlist ID = [%s]",
-                              token, user_id, playlist_id ));
+  if (( token === null ) || ( user_id === null )) {
+    console.log( util.format( "Missing parameters in 'export' request: token = [%s], user ID = [%s]", token, user_id ));
     res.send( 'Error' );
   } else {
     u.export_playlist( res, token, user_id, playlist_id )
