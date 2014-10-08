@@ -57,7 +57,7 @@ exports.playlist_url = function( user_id, playlist_id ) {
  */
 exports.get = function( access_token, url, handler ) {
 
-  // console.log( util.format( "GET: [%s]", url ));
+  // console.log( "GET: [%s]", url );
   // https://www.npmjs.org/package/request
 
   request.get( url,
@@ -66,7 +66,7 @@ exports.get = function( access_token, url, handler ) {
     if (( ! error ) && ( response.statusCode === 200 )) {
       handler( body )
     } else {
-      console.log( util.format( "Failed to send GET request to '%s', status code is %s", url, response.statusCode ))
+      console.log( "Failed to send GET request to '%s', status code is %s", url, response.statusCode )
       if ( error ){ console.log( error ) }
       console.log( body )
     }

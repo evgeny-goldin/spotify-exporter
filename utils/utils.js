@@ -1,8 +1,7 @@
 "use strict";
 
-var _    = require( 'underscore' );
-var util = require( 'util' );
-var hu   = require( './http-utils' );
+var _  = require( 'underscore' );
+var hu = require( './http-utils' );
 
 
 /**
@@ -10,88 +9,113 @@ var hu   = require( './http-utils' );
  * @param {res}          response to send ZIP to
  * @param {token}        access token
  * @param {user_id}      user ID of playlist owner
- * @param {playlist_id}  playlist ID
+ * @param {playlist_id}  playlist ID, null if all playlists need to be exported
  */
-exports.export_playlist = function( res, token, user_id, playlist_id, callback ) {
+exports.export = function( res, token, user_id, playlist_id, callback ) {
+  ( playlist_id == null ) ? export_all_playlists( res, token, user_id ) :
+                            export_playlist( res, token, user_id, playlist_id );
+}
 
-  var date       = new Date();
-  var start_time = date.getTime();
 
-  if ( playlist_id == null ) {
-    // Export all user's playlists
-    // https://developer.spotify.com/web-api/get-list-users-playlists/
+var export_all_playlists = function( res, token, user_id ) {
 
-    hu.get( token, hu.user_playlists_url( user_id ), function( response ){
-      var playlists          = response.items;
-      var playlists_reported = {};
-      _.each( playlists, function( playlist ){
-        exports.export_playlist( res, token, playlist.owner.id, playlist.id, function( playlists_json ){
-          playlists_reported[ playlists_json.uri ] = playlists_json
-          var reported                             = Object.keys( playlists_reported ).length
-          console.log( util.format( "%s playlists out of %s reported", reported, playlists.length ));
+  // Reading all user's playlists
+  // https://developer.spotify.com/web-api/get-list-users-playlists/
+  hu.get( token, hu.user_playlists_url( user_id ), function( response ){
 
-          if ( reported == playlists.length ) {
+  /**
+   * Iterating over all user's playlists and exporting them one-by-one.
+   *
+   * 'spotify_playlist' - JSON of a playlist, full Spotify format
+   * 'export_playlist'  - JSON of a playlist, short export format
+   * 'playlists'        - collection of export_playlists
+   */
 
-            // Calculating array of playlists lengths (each element is some playlist's length) and summing it up
-            var playlist_lengths = _.map( playlists_reported,  function( playlists_json ){ return playlists_json.tracks.length });
-            var tracks           = _.reduce( playlist_lengths, function( sum, size ){ return sum + size });
+    var start_time          = now()
+    var number_of_playlists = response.items.length;
+    var playlists           = [];
 
-            console.log( util.format( "%s tracks of %s playlists fetched in %s ms",
-                                      tracks, playlists.length, elapsed_time( start_time )));
-          }
-        });
+    _.each( response.items, function( spotify_playlist ){
+
+      var user_id     = spotify_playlist.owner.id;
+      var playlist_id = spotify_playlist.id;
+
+      export_playlist( res, token, user_id, playlist_id, function( export_playlist ){
+        playlists.push( export_playlist );
+
+        console.log( "%s playlists out of %s are reported", playlists.length, number_of_playlists );
+
+        if ( playlists.length == number_of_playlists ) {
+          // All user's playlists have been reported
+          var total_tracks = sum( _.map( playlists, function( export_playlist ){ return export_playlist.total_tracks }));
+
+          console.log( "%s tracks of %s playlists fetched in %s ms",
+                       total_tracks, number_of_playlists, elapsed_time( start_time ));
+        }
       });
     });
-  } else {
-    // Export a playlist specified
-    // https://developer.spotify.com/web-api/get-playlist/
+  });
+}
 
-    console.log( util.format( "Reading playlist '%s' of '%s'", playlist_id, user_id ));
 
-    hu.get( token, hu.playlist_url( user_id, playlist_id ), function( response ){
+var export_playlist = function( res, token, user_id, playlist_id, callback ) {
 
-      var playlist = {
-        'start_time'  : start_time,
-        'exported on' : date.toString(),
-        'name'        : response.name,
-        'url'         : response.external_urls.spotify,
-        'uri'         : response.uri,
-        'owner'       : response.owner.id,
-        'tracks'      : read_tracks( response.tracks.items )
-      }
+  console.log( "Reading playlist '%s' of '%s'", playlist_id, user_id );
 
-      export_playlist_paginate( res, token, playlist, response.tracks.next, callback );
-    });
-  }
+  // Reading playlist data (name, uri, owner, tracks)
+  // https://developer.spotify.com/web-api/get-playlist/
+  hu.get( token, hu.playlist_url( user_id, playlist_id ), function( response ){
+
+    var export_playlist = {
+      'start_time'  : now(),
+      'name'        : response.name,
+      'id'          : response.id,
+      'url'         : response.external_urls.spotify,
+      'uri'         : response.uri,
+      'owner'       : response.owner.id,
+      'exported_on' : new Date().toUTCString(),
+      'total_tracks': response.tracks.items.length,
+      'tracks'      : read_tracks( response.tracks.items )
+    }
+
+    export_playlist_paginate( res, token, export_playlist, response.tracks.next, callback );
+  });
 }
 
 
 /**
  * Exports a playlist specified by sending it in a ZIP response, paginating over all tracks.
- * @param {res}        response to send ZIP to
- * @param {token}      access token
- * @param {playlist}   playlist JSON
+ * @param {res}             response to send ZIP to
+ * @param {token}           access token
+ * @param {export_playlist} JSON of a playlist, export format
  * @param {tracks_url} URL to read playlist tracks from, null when pagination is over
  */
-var export_playlist_paginate = function( res, token, playlist, tracks_url, callback ) {
+var export_playlist_paginate = function( res, token, export_playlist, tracks_url, callback ) {
 
   if ( tracks_url === null ) {
-    // Pagination is over, no more tracks to fetch
+    // Pagination is over, no more tracks left to fetch
 
-    console.log( util.format( "%s tracks of playlist '%s' fetched in %s ms",
-                              playlist.tracks.length, playlist.name, elapsed_time( playlist.start_time )))
-    playlist.start_time = undefined;
+    console.log( "%s tracks of playlist '%s' (%s) fetched in %s ms",
+                 export_playlist.total_tracks, export_playlist.name, export_playlist.id,
+                 elapsed_time( export_playlist.start_time ))
 
+    export_playlist.start_time = undefined;
+
+    // When pagination is over and no callback is provided (user requested export of a single playlist) -
+    // export_playlist is sent as Zip, othwerwise callback is invoked (it'll eventually send all playlists as a Zip)
     if ( typeof callback == 'undefined' ){
-      hu.send_zip_response( res, playlist.name, JSON.stringify( playlist, null, '  ' ));
+      hu.send_zip_response( res, export_playlist.name, JSON.stringify( export_playlist, null, '  ' ));
     } else {
-      callback( playlist )
+      callback( export_playlist )
     }
   } else {
     // Pagination continues, there are more tracks to fetch
+    // Reading playlists's tracks
+    // https://developer.spotify.com/web-api/get-playlists-tracks/
     hu.get( token, tracks_url, function( response ){
-      playlist.tracks = playlist.tracks.concat( read_tracks( response.items ))
-      export_playlist_paginate( res, token, playlist, response.next, callback )
+      export_playlist.tracks       = export_playlist.tracks.concat( read_tracks( response.items ))
+      export_playlist.total_tracks = export_playlist.tracks.length
+      export_playlist_paginate( res, token, export_playlist, response.next, callback )
     })
   }
 }
@@ -104,8 +128,8 @@ var export_playlist_paginate = function( res, token, playlist, tracks_url, callb
  */
 var read_tracks = function ( track_items ) {
   // https://developer.spotify.com/web-api/get-playlists-tracks/
-  return _.map( track_items, function( item ){
-    var track = item.track;
+  return _.map( track_items, function( track_item ){
+    var track = track_item.track;
     return {
       'name'    : track.name,
       'album'   : track.album.name,
@@ -118,14 +142,9 @@ var read_tracks = function ( track_items ) {
 }
 
 
-/**
- * Retrieves amount of milliseconds elapsed since the start time specified.
- * @param  {start_time} start time
- * @return {number}     amount of milliseconds elapsed since the start time
- */
-var elapsed_time = function( start_time ) {
-  return ( new Date().getTime() - start_time );
-}
+var now          = function(){ return Date.now() }
+var elapsed_time = function( start_time ) { return ( now() - start_time ) }
+var sum          = function( array      ) { return _.reduce( array, function( sum, j ){ return sum + j })}
 
 
 /**
@@ -140,5 +159,5 @@ var duration = function( duration_ms ) {
   var seconds          = Math.ceil(( duration_ms - ( minutes * millis_in_minute )) / millis_in_second );
   var pad              = function ( n ){ return (( n < 10 ? '0' : '' ) + n )}
 
-  return util.format( "%s:%s", pad( minutes ), pad( seconds ));
+  return pad( minutes ) + ':' + pad( seconds );
 }

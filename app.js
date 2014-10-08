@@ -4,7 +4,6 @@ var express         = require( 'express' );
 var fs              = require( 'fs');
 var request         = require( 'request' );
 var cookieParser    = require( 'cookie-parser' );
-var util            = require( 'util' );
 var _               = require( 'underscore' );
 var u               = require( './utils/utils' );
 var hu              = require( './utils/http-utils' );
@@ -25,7 +24,7 @@ var random_possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234
  */
 var randomString = function( length ) {
   return _.times( length, function(){
-    // Create an array of N random letters, then join them all with ''
+    // Create an array of N random letters, then join them with ''
     return random_possible.charAt( Math.floor( Math.random() * random_possible.length ))
   }).join( '' );
 }
@@ -102,13 +101,14 @@ app.get( '/export', function( req, res ) {
 
   var token       = hu.param( req, 't' );
   var user_id     = hu.param( req, 'u' );
-  var playlist_id = hu.param( req, 'p' ); // null for "all playlists"
+  var playlist_id = hu.param( req, 'p' ); // null when all playlists are exported
 
   if (( token === null ) || ( user_id === null )) {
-    console.log( util.format( "Missing parameters in 'export' request: token = [%s], user ID = [%s]", token, user_id ));
+    console.log( "Missing parameters in 'export' request: token = [%s], user ID = [%s]",
+                 token, user_id );
     res.send( 'Error' );
   } else {
-    u.export_playlist( res, token, user_id, playlist_id )
+    u.export( res, token, user_id, playlist_id )
   }
 });
 
