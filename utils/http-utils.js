@@ -3,6 +3,8 @@
 var request     = require( 'request' );
 var querystring = require( 'querystring' );
 var util        = require( 'util' );
+var _           = require( 'underscore' );
+var archiver    = require( 'archiver' );
 var API_URL     = 'https://api.spotify.com/v1'
 
 
@@ -76,16 +78,25 @@ exports.get = function( access_token, url, handler ) {
 
 /**
  * Sends a ZIP response with content provided.
- * @param {res}       response to send ZIP to
- * @param {file_name} name of the file to create in a ZIP
- * @param {content}   String content to store in a file
+ * @param {res}              response to send ZIP to
+ * @param {export_playlists} export playlists to send
  */
-exports.send_zip_response = function( res, file_name, content ) {
+exports.send_zip_response = function( res, export_playlists ) {
+
+  var archive_name = ( export_playlists.length == 1 ? export_playlists[0].name : 'playlists' ) + '.zip';
+  console.log( "Sending '%s' with %s playlist%s",
+               archive_name, export_playlists.length, ( export_playlists.length == 1 ? '' : 's' ))
+
   // http://stackoverflow.com/a/25210806/472153
   res.writeHead( 200, { 'Content-Type':        'application/zip',
-                        'Content-disposition': 'attachment; filename="' + file_name + '.zip"' });
-  var archiver = require( 'archiver' );
-  var zip      = archiver( 'zip' );
+                        'Content-disposition': 'attachment; filename="' + archive_name + '"' });
+  var zip = archiver( 'zip' );
   zip.pipe( res );
-  zip.append( content, { name: file_name + '.json' }).finalize();
+
+  _.each( export_playlists, function( export_playlist ){
+    zip.append( JSON.stringify( export_playlist, null, '  ' ),
+                { name: export_playlist.name + '.json' });
+  });
+
+  zip.finalize();
 }

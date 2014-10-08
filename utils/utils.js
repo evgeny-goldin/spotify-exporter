@@ -28,12 +28,12 @@ var export_all_playlists = function( res, token, user_id ) {
    *
    * 'spotify_playlist' - JSON of a playlist, full Spotify format
    * 'export_playlist'  - JSON of a playlist, short export format
-   * 'playlists'        - collection of export_playlists
+   * 'export_playlists' - array of export_playlists
    */
 
     var start_time          = now()
     var number_of_playlists = response.items.length;
-    var playlists           = [];
+    var export_playlists    = [];
 
     _.each( response.items, function( spotify_playlist ){
 
@@ -41,16 +41,20 @@ var export_all_playlists = function( res, token, user_id ) {
       var playlist_id = spotify_playlist.id;
 
       export_playlist( res, token, user_id, playlist_id, function( export_playlist ){
-        playlists.push( export_playlist );
+        export_playlists.push( export_playlist );
 
-        console.log( "%s playlists out of %s are reported", playlists.length, number_of_playlists );
+        console.log( "%s playlists out of %s are reported", export_playlists.length, number_of_playlists );
 
-        if ( playlists.length == number_of_playlists ) {
+        if ( export_playlists.length == number_of_playlists ) {
           // All user's playlists have been reported
-          var total_tracks = sum( _.map( playlists, function( export_playlist ){ return export_playlist.total_tracks }));
+          var total_tracks = sum( _.map( export_playlists, function( export_playlist ) {
+            return export_playlist.total_tracks
+          }));
 
           console.log( "%s tracks of %s playlists fetched in %s ms",
                        total_tracks, number_of_playlists, elapsed_time( start_time ));
+
+          hu.send_zip_response( res, export_playlists );
         }
       });
     });
@@ -104,7 +108,7 @@ var export_playlist_paginate = function( res, token, export_playlist, tracks_url
     // When pagination is over and no callback is provided (user requested export of a single playlist) -
     // export_playlist is sent as Zip, othwerwise callback is invoked (it'll eventually send all playlists as a Zip)
     if ( typeof callback == 'undefined' ){
-      hu.send_zip_response( res, export_playlist.name, JSON.stringify( export_playlist, null, '  ' ));
+      hu.send_zip_response( res, [ export_playlist ] );
     } else {
       callback( export_playlist )
     }
