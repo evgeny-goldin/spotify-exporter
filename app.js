@@ -1,117 +1,33 @@
 
 var express       = require( 'express' );
-var request       = require( 'request' );
-var _             = require( 'underscore' );
-var querystring   = require( 'querystring' );
-var cookieParser  = require( 'cookie-parser' );
 var fs            = require( 'fs');
+var request       = require( 'request' );
+var cookieParser  = require( 'cookie-parser' );
 var util          = require( 'util' );
+var u             = require( './utils' );
 
-var app           = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
-var client_id     = app['client']['id'];
-var client_secret = app['client']['secret'];
-var redirect_uri  = app['client']['redirect_uri'];
+var app           = express();
+var app_data      = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF-8" }));
+var client_id     = app_data['client']['id'];
+var client_secret = app_data['client']['secret'];
+var redirect_uri  = app_data['client']['redirect_uri'];
 var stateKey      = 'spotify_auth_state';
 var scope         = 'user-read-private user-read-email playlist-read-private';
-var app           = express();
-
-
-/**
- * Generates a random string containing numbers and letters
- * @param  {number} length The length of the string
- * @return {string} The generated string
- */
-var generateRandomString = function( length ) {
-  var text     = '';
-  var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-  for (var i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-};
-
-
-var redirect = function( res, url, params ) {
-  res.redirect( url + querystring.stringify( params ));
-}
-
-
-var param = function( req, name ){
-  return req.query[ name ] || null;
-}
-
-
-var get = function( access_token, url, handler ) {
-
-  // https://www.npmjs.org/package/request
-
-  request.get( url,
-               { headers: { 'Authorization': 'Bearer ' + access_token }},
-               function( error, response, body ){
-    if (( ! error ) && ( response.statusCode === 200 )) {
-      handler( body )
-    } else {
-      console.log( "Failed to send GET request to '" + url + "', status code is " + response.statusCode )
-      if ( error ){ console.log( error ) }
-      console.log( body )
-    }
-  });
-}
-
-
-var send_zip_response = function( res, file_name, content ) {
-  // http://stackoverflow.com/a/25210806/472153
-  res.writeHead( 200, { 'Content-Type':        'application/zip',
-                        'Content-disposition': 'attachment; filename="' + file_name + '.zip"' });
-  var archiver = require( 'archiver' );
-  var zip      = archiver( 'zip' );
-  zip.pipe( res );
-  zip.append( content, { name: file_name + '.json' }).finalize();
-}
-
-
-var export_playlist = function( res, token, playlist_name, playlist_url, tracks_url, all_tracks ) {
-
-  if ( tracks_url != null ) {
-    console.log( util.format( "Reading [%s]", tracks_url ))
-  } else {
-    console.log( util.format( "Sending playlist '%s' with %s tracks", playlist_name, all_tracks.length ))
-  }
-
-  if ( tracks_url === null ) {
-    // Pagination is over
-    var playlist_json = JSON.stringify({
-      'name':   playlist_name,
-      'url':    playlist_url,
-      'tracks': all_tracks
-    }, null, '  ' );
-    send_zip_response( res, playlist_name, playlist_json );
-  } else {
-    // Pagination continues
-    get( token, tracks_url, function( response ){
-      response = JSON.parse( response );
-      tracks   = _.map( response.items, function( item ){ return {
-        'artists': _.map( item.track.artists, function( artist ){ return artist.name }).join( ', ' ),
-        'album'  : item.track.album.name,
-        'name'   : item.track.name
-      }})
-
-      export_playlist( res, token, playlist_name, playlist_url, response.next, all_tracks.concat( tracks ))
-    })
-  }
-}
 
 
 app.use( express.static( __dirname + '/public' )).use( cookieParser());
 
 
+/**
+ * Called when "login" Spotify logo is clicked.
+ * Makes a call to Spotify "authorize" API.
+ */
 app.get( '/login', function( req, res ) {
 
-  var state = generateRandomString( 16 );
+  var state = u.randomString( 64 );
   res.cookie( stateKey, state );
 
-  redirect( res, 'https://accounts.spotify.com/authorize?', {
+  u.redirect( res, 'https://accounts.spotify.com/authorize?', {
     response_type: 'code',
     client_id:     client_id,
     scope:         scope,
@@ -121,6 +37,10 @@ app.get( '/login', function( req, res ) {
 });
 
 
+/**
+ * Called by Spotify "authorize" callback.
+ * Redirects to the application's page.
+ */
 app.get( '/callback', function( req, res ) {
 
   var code        = req.query.code  || null;
@@ -128,7 +48,7 @@ app.get( '/callback', function( req, res ) {
   var storedState = req.cookies ? req.cookies[stateKey] : null;
 
   if (( state === null ) || ( state !== storedState )) {
-    redirect( res, '/#', { error: 'state_mismatch' });
+    u.redirect( res, '/#', { error: 'state_mismatch' });
   } else {
     res.clearCookie( stateKey );
     var authOptions = {
@@ -146,25 +66,28 @@ app.get( '/callback', function( req, res ) {
     request.post( authOptions, function( error, response, body ) {
       if (( ! error ) && ( response.statusCode === 200 )) {
 
-        var access_token  = body.access_token,
-            refresh_token = body.refresh_token;
+        var access_token  = body.access_token;
+        var refresh_token = body.refresh_token;
 
-        // we can also pass the token to the browser to make requests from there
-        redirect( res, '/#', { access_token: access_token, refresh_token: refresh_token });
+        u.redirect( res, '/#', { access_token: access_token, refresh_token: refresh_token });
       } else {
-        redirect( res, '/#', { error: 'invalid_token' });
+        u.redirect( res, '/#', { error: 'invalid_token' });
       }
     });
   }
 });
 
 
+/**
+ * Called when user clicks "export" link.
+ * Sends back a ZIP file with playlist or playlists selected.
+ */
 app.get( '/export', function( req, res ) {
 
-  var token         = param( req, 'token'  );
-  var playlist_name = param( req, 'name'   );
-  var playlist_url  = param( req, 'url'    );
-  var tracks_url    = param( req, 'tracks' );
+  var token         = u.param( req, 'token'  );
+  var playlist_name = u.param( req, 'name'   );
+  var playlist_url  = u.param( req, 'url'    );
+  var tracks_url    = u.param( req, 'tracks' );
 
   if (( token === null ) || ( playlist_name === null ) || ( playlist_url === null ) || ( tracks_url === null )) {
     console.log( util.format( "Missing parameters: token = [%s], playlist name = [%s], playlist URL = [%s], tracks URL = [%s]",
@@ -173,9 +96,9 @@ app.get( '/export', function( req, res ) {
     return;
   }
 
-  export_playlist( res, token, playlist_name, playlist_url, tracks_url, [] )
+  u.export_playlist( res, token, playlist_name, playlist_url, tracks_url, [] )
 });
 
 
-console.log( 'http://127.0.0.1:8080' );
+console.log( 'http://127.0.0.1:8080 is waiting for you!' );
 app.listen( 8080 );
