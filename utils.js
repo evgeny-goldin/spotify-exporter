@@ -58,12 +58,16 @@ exports.export_playlist = function( res, token, user_id, playlist_id ) {
        util.format( 'https://api.spotify.com/v1/users/%s/playlists/%s', user_id, playlist_id ),
        function( response ){
 
+    var d    = new Date();
+    var date = util.format( "%s/%s/%s at %s:%s:%s", d.getDate(),  d.getMonth() + 1, d.getFullYear(),
+                                                    d.getHours(), d.getMinutes(),   d.getSeconds());
     var playlist = {
-      'start' : new Date().getTime(),
-      'name'  : response.name,
-      'url'   : response.external_urls.spotify,
-      'owner' : response.owner.id,
-      'tracks': read_tracks( response.tracks.items )
+      'start'    : d.getTime(),
+      'exported' : date,
+      'name'     : response.name,
+      'url'      : response.external_urls.spotify,
+      'owner'    : response.owner.id,
+      'tracks'   : read_tracks( response.tracks.items )
     }
 
     export_playlist_paginate( res, token, playlist, response.tracks.next );
@@ -84,7 +88,7 @@ var export_playlist_paginate = function( res, token, playlist, tracks_url ) {
     // Pagination is over, no more tracks to fetch
     var fetch_duration = new Date().getTime() - playlist.start;
     playlist.start     = undefined;
-    console.log( util.format( "%s tracks of playlist '%s' were fetched in %s ms",
+    console.log( util.format( "%s tracks of playlist '%s' fetched in %s ms",
                               playlist.tracks.length, playlist.name, fetch_duration ))
     send_zip_response( res, playlist.name, JSON.stringify( playlist, null, '  ' ));
   } else {
