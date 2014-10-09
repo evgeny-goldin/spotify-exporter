@@ -97,7 +97,7 @@
             var user_profile = response;
             render( 'user-profile', user_profile )
             // https://developer.spotify.com/web-api/get-list-users-playlists/
-            get ( '/users/' + user_profile.id + '/playlists', function( response ){
+            get ( '/users/' + user_profile.id + '/playlists?limit=50', function( response ){
               render( 'user-profile', $.extend( user_profile, { "playlists"   : response.items,
                                                                 "access_token": access_token }));
             });

@@ -19,17 +19,25 @@ var tracks_fields    = 'next,total,items(track(name,album.name,artists.name,dura
 exports.export = function( res, token, user_id, playlist_id ) {
 
   if ( playlist_id === null ){
-    var url = util.format( "%s?fields=%s", hu.user_playlists_url( user_id ), playlists_fields )
+
+    // Array of { user_id: playlist_id } hashes, each hash contains a single mapping only
+    var playlists = [];
+
     // Reading all user's playlists
     // https://developer.spotify.com/web-api/get-list-users-playlists/
-    hu.get( token, url, function( response ){
-      // Array of { user_id: playlist_id } mappings
-      var playlists = _.map( response.items, function( spotify_playlist ){
+    hu.paginate( token, hu.user_playlists_url( user_id ), playlists_fields,
+                 [ 'next' ],
+                 function( response, is_finish ){
+
+      playlists = playlists.concat( _.map( response.items, function( spotify_playlist ){
         var user_id     = spotify_playlist.owner.id
         var playlist_id = spotify_playlist.id
         return hash( user_id, playlist_id );
-      });
-      export_playlists( res, token, playlists );
+      }));
+
+      if ( is_finish ){
+        export_playlists( res, token, playlists );
+      }
     });
   } else {
     export_playlists( res, token, [ hash( user_id, playlist_id ) ] );

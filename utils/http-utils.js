@@ -5,6 +5,7 @@ var util        = require( 'util' );
 var request     = require( 'request' );
 var querystring = require( 'querystring' );
 var archiver    = require( 'archiver' );
+var jp          = require( 'JSONPath' );
 var API_ROOT    = 'https://api.spotify.com/v1'
 
 
@@ -32,22 +33,52 @@ exports.param = function( req, name ){
 
 /**
  * Retrieves a URL for Spotify API call to read user's playlists.
+ * https://developer.spotify.com/web-api/get-list-users-playlists/
  * @param {user_id} Spotify user ID
  * @return {string} URL for Spotify API call to read user's playlists
  */
 exports.user_playlists_url = function( user_id ) {
-  return util.format( '%s/users/%s/playlists', API_ROOT, user_id );
+  return util.format( '%s/users/%s/playlists?limit=50', API_ROOT, user_id );
 }
 
 
 /**
  * Retrieves a URL for Spotify API call to read a playlist.
+ * https://developer.spotify.com/web-api/get-playlist/
  * @param  {user_id}     Spotify user ID
  * @param  {playlist_id} Spotify playlist ID
  * @return {string}      URL for Spotify API call to read a playlist
  */
 exports.playlist_url = function( user_id, playlist_id ) {
   return util.format( '%s/users/%s/playlists/%s', API_ROOT, user_id, playlist_id );
+}
+
+
+/**
+ * Recursively paginates over a query as long as "next" is available.
+ * @param {token}      access token to authorize the request with
+ * @param {url}        initial URL to send the request to
+ * @param {fields}     "fields" filter for response JSON
+ * @param {json_paths} possible JSONPath paths for the "next" url in response JSON
+ * @param {callback}   callback to invoke for each iteration
+ */
+exports.paginate = function( token, url, fields, json_paths, callback ) {
+
+  url = util.format( "%s%sfields=%s",
+                     url, ( url.indexOf( '?' ) > 0 ? '&' : '?' ), fields );
+
+  exports.get( token, url, function( response ){
+    _.each( json_paths, function( json_path ){
+      var next = jp.eval( response, json_path )[ 0 ];
+      if ( typeof next != 'undefined' ) {
+        var is_finish = ( next == null );
+        callback( response, is_finish );
+        if ( ! is_finish ){
+          exports.paginate( token, next.toString(), fields, json_paths, callback );
+        }
+      }
+    });
+  });
 }
 
 
