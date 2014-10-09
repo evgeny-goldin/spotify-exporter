@@ -1,10 +1,11 @@
 "use strict";
 
-var _               = require( 'underscore' );
-var util            = require( 'util' );
-var hu              = require( './http-utils' );
-var playlist_fields = 'name,id,external_urls.spotify,uri,owner.id,tracks'
-var tracks_fields   = 'next,total,items(track(name,album.name,artists.name,duration_ms,uri,preview_url))'
+var _                = require( 'underscore' );
+var util             = require( 'util' );
+var hu               = require( './http-utils' );
+var playlists_fields = 'next,items(id,owner.id)'
+var playlist_fields  = 'name,id,external_urls.spotify,uri,owner.id,tracks'
+var tracks_fields    = 'next,total,items(track(name,album.name,artists.name,duration_ms,uri,preview_url))'
 
 
 
@@ -18,9 +19,10 @@ var tracks_fields   = 'next,total,items(track(name,album.name,artists.name,durat
 exports.export = function( res, token, user_id, playlist_id ) {
 
   if ( playlist_id === null ){
+    var url = util.format( "%s?fields=%s", hu.user_playlists_url( user_id ), playlists_fields )
     // Reading all user's playlists
     // https://developer.spotify.com/web-api/get-list-users-playlists/
-    hu.get( token, hu.user_playlists_url( user_id ), function( response ){
+    hu.get( token, url, function( response ){
       // Array of { user_id: playlist_id } mappings
       var playlists = _.map( response.items, function( spotify_playlist ){
         var user_id     = spotify_playlist.owner.id
