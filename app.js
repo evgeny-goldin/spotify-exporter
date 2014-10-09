@@ -13,6 +13,7 @@ var app_data        = JSON.parse( fs.readFileSync( 'app.json', { "encoding":"UTF
 var client_id       = app_data['client']['id'];
 var client_secret   = app_data['client']['secret'];
 var redirect_uri    = app_data['client']['redirect_uri'];
+var app_url         = redirect_uri.replace( '/callback', '' );
 var stateKey        = 'spotify_auth_state';
 var scope           = 'user-read-private user-read-email playlist-read-private';
 var random_possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789АБВГДейка';
@@ -113,5 +114,5 @@ app.get( '/export', function( req, res ) {
 });
 
 
-console.log( 'http://127.0.0.1:%s is waiting for you!', app_data['port'] );
+console.log( '%s is waiting for you!', app_url );
 app.listen( app_data['port'] );
