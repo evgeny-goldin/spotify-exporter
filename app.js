@@ -113,5 +113,5 @@ app.get( '/export', function( req, res ) {
 });
 
 
-console.log( 'http://127.0.0.1:8080 is waiting for you!' );
-app.listen( 8080 );
+console.log( 'http://127.0.0.1:%s is waiting for you!', app_data['port'] );
+app.listen( app_data['port'] );
