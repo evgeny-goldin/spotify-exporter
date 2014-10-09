@@ -26,7 +26,6 @@ exports.export = function( res, token, user_id, playlist_id ) {
     // Reading all user's playlists
     // https://developer.spotify.com/web-api/get-list-users-playlists/
     hu.paginate( token, hu.user_playlists_url( user_id ), playlists_fields,
-                 [ 'next' ],
                  function( response, is_finish ){
 
       playlists = playlists.concat( _.map( response.items, function( spotify_playlist ){
@@ -63,7 +62,7 @@ var export_playlists = function( res, token, playlists ) {
 
       read_playlist( token, user_id, playlist_id, function( export_playlist ){
         export_playlists.push( export_playlist );
-        tracks_total += export_playlist.tracks_total
+        tracks_total += export_playlist.tracks_total;
 
         console.log( "%s track%s of playlist '%s' (%s) read in %s ms (playlist %s out of %s)",
                      export_playlist.tracks_total, s( export_playlist.tracks_total ),
@@ -95,50 +94,36 @@ var read_playlist = function( token, user_id, playlist_id, callback ) {
 
   console.log( "Reading playlist '%s' of '%s'", playlist_id, user_id );
 
-  var url = util.format( "%s?fields=%s(%s)",
-                         hu.playlist_url( user_id, playlist_id ), playlist_fields, tracks_fields );
+  var playlist_url = util.format( "%s?fields=%s(%s)",
+                                  hu.playlist_url( user_id, playlist_id ),
+                                  playlist_fields, tracks_fields )
 
   // Reading playlist data (name, uri, owner, tracks)
   // https://developer.spotify.com/web-api/get-playlist/
-  hu.get( token, url, function( spotify_playlist ){
+  hu.get( token, playlist_url, function( response ){
 
     var export_playlist = {
-      'name'        : spotify_playlist.name,
-      'id'          : spotify_playlist.id,
-      'url'         : spotify_playlist.external_urls.spotify,
-      'uri'         : spotify_playlist.uri,
-      'owner'       : 'spotify:user:' + spotify_playlist.owner.id,
+      'name'        : response.name,
+      'id'          : response.id,
+      'url'         : response.external_urls.spotify,
+      'uri'         : response.uri,
+      'owner'       : 'spotify:user:' + response.owner.id,
       'exported_on' : new Date().toUTCString(),
-      'tracks_total': spotify_playlist.tracks.total,
-      'tracks'      : read_tracks( spotify_playlist.tracks.items )
+      'tracks_total': response.tracks.total,
+      'tracks'      : read_tracks( response.tracks.items )
     }
 
-    read_playlist_paginate( token, export_playlist, spotify_playlist.tracks.next, callback );
+    if ( response.tracks.next === null ) {
+      callback( export_playlist )
+    } else {
+      hu.paginate( token, response.tracks.next, tracks_fields, function( response, is_finish ){
+        export_playlist.tracks = export_playlist.tracks.concat( read_tracks( response.items ))
+        if ( is_finish ) {
+          callback( export_playlist )
+        }
+      });
+    }
   });
-}
-
-
-/**
- * Reads all tracks of a playlist specified, paginating recursively until finished.
- * @param {token}           access token
- * @param {export_playlist} JSON of a playlist, export format
- * @param {tracks_url}      URL to read playlist tracks from, null when pagination is over
- * @param {callback}        callback to invoke when pagination finishes with playlist to export
- */
-var read_playlist_paginate = function( token, export_playlist, tracks_url, callback ) {
-
-  if ( tracks_url === null ) {
-    // Pagination is over, no more tracks left to read
-    callback( export_playlist );
-  } else {
-    // Pagination continues, reading "next" playlists's tracks
-    // https://developer.spotify.com/web-api/get-playlists-tracks/
-    var url = util.format( "%s&fields=%s", tracks_url, tracks_fields );
-    hu.get( token, url, function( response ){
-      export_playlist.tracks = export_playlist.tracks.concat( read_tracks( response.items ))
-      read_playlist_paginate( token, export_playlist, response.next, callback )
-    })
-  }
 }
 
 

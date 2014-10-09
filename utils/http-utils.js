@@ -5,7 +5,6 @@ var util        = require( 'util' );
 var request     = require( 'request' );
 var querystring = require( 'querystring' );
 var archiver    = require( 'archiver' );
-var jp          = require( 'JSONPath' );
 var API_ROOT    = 'https://api.spotify.com/v1'
 
 
@@ -55,29 +54,23 @@ exports.playlist_url = function( user_id, playlist_id ) {
 
 
 /**
- * Recursively paginates over a query as long as "next" is available.
- * @param {token}      access token to authorize the request with
- * @param {url}        initial URL to send the request to
- * @param {fields}     "fields" filter for response JSON
- * @param {json_paths} possible JSONPath paths for the "next" url in response JSON
- * @param {callback}   callback to invoke for each iteration
+ * Recursively paginates over a query as long as "next" URL is available.
+ * @param {token}     access token to authorize the request with
+ * @param {url}       initial URL to send the request to
+ * @param {fields}    "fields" filter for response JSON
+ * @param {callback}  callback to invoke for each iteration
  */
-exports.paginate = function( token, url, fields, json_paths, callback ) {
+exports.paginate = function( token, url, fields, callback ) {
 
   url = util.format( "%s%sfields=%s",
                      url, ( url.indexOf( '?' ) > 0 ? '&' : '?' ), fields );
 
   exports.get( token, url, function( response ){
-    _.each( json_paths, function( json_path ){
-      var next = jp.eval( response, json_path )[ 0 ];
-      if ( typeof next != 'undefined' ) {
-        var is_finish = ( next == null );
-        callback( response, is_finish );
-        if ( ! is_finish ){
-          exports.paginate( token, next.toString(), fields, json_paths, callback );
-        }
-      }
-    });
+    var is_finish = ( response.next == null );
+    callback( response, is_finish );
+    if ( ! is_finish ){
+      exports.paginate( token, response.next.toString(), fields, callback );
+    }
   });
 }
 
