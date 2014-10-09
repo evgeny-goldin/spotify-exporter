@@ -85,6 +85,9 @@ app.get( '/callback', function( req, res ) {
         var access_token  = body.access_token;
         var refresh_token = body.refresh_token;
 
+        console.log( "Access token is: [%s]",  access_token  )
+        console.log( "Refresh token is: [%s]", refresh_token )
+
         hu.redirect( res, '/#', { access_token: access_token, refresh_token: refresh_token });
       } else {
         hu.redirect( res, '/#', { error: 'invalid_token' });

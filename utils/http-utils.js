@@ -1,11 +1,11 @@
 "use strict";
 
+var _           = require( 'underscore' );
+var util        = require( 'util' );
 var request     = require( 'request' );
 var querystring = require( 'querystring' );
-var util        = require( 'util' );
-var _           = require( 'underscore' );
 var archiver    = require( 'archiver' );
-var API_URL     = 'https://api.spotify.com/v1'
+var API_ROOT    = 'https://api.spotify.com/v1'
 
 
 /**
@@ -36,18 +36,18 @@ exports.param = function( req, name ){
  * @return {string} URL for Spotify API call to read user's playlists
  */
 exports.user_playlists_url = function( user_id ) {
-  return util.format( '%s/users/%s/playlists', API_URL, user_id );
+  return util.format( '%s/users/%s/playlists', API_ROOT, user_id );
 }
 
 
 /**
  * Retrieves a URL for Spotify API call to read a playlist.
- * @param {user_id}     Spotify user ID
- * @param {playlist_id} Spotify playlist ID
- * @return {string} URL for Spotify API call to read a playlist
+ * @param  {user_id}     Spotify user ID
+ * @param  {playlist_id} Spotify playlist ID
+ * @return {string}      URL for Spotify API call to read a playlist
  */
 exports.playlist_url = function( user_id, playlist_id ) {
-  return util.format( '%s/users/%s/playlists/%s', API_URL, user_id, playlist_id );
+  return util.format( '%s/users/%s/playlists/%s', API_ROOT, user_id, playlist_id );
 }
 
 
@@ -68,8 +68,9 @@ exports.get = function( token, url, callback ) {
     if (( ! error ) && ( response.statusCode === 200 )) {
       callback( body )
     } else {
-      console.log( "Failed to send GET request to '%s', status code is %s", url, response.statusCode )
-      if ( error ){ console.log( error ) }
+      console.trace( "Failed to send GET request to '%s'", url )
+      if ( error                           ){ console.log( error ) }
+      if ( response && response.statusCode ){ console.log( "Status code is %s", response.statusCode ) }
       console.log( body );
     }
   });

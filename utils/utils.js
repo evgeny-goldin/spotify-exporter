@@ -1,7 +1,11 @@
 "use strict";
 
-var _  = require( 'underscore' );
-var hu = require( './http-utils' );
+var _               = require( 'underscore' );
+var util            = require( 'util' );
+var hu              = require( './http-utils' );
+var playlist_fields = 'name,id,external_urls.spotify,uri,owner.id,tracks'
+var tracks_fields   = 'next,total,items(track(name,album.name,artists.name,duration_ms,uri,preview_url))'
+
 
 
 /**
@@ -81,9 +85,12 @@ var read_playlist = function( token, user_id, playlist_id, callback ) {
 
   console.log( "Reading playlist '%s' of '%s'", playlist_id, user_id );
 
+  var url = util.format( "%s?fields=%s(%s)",
+                         hu.playlist_url( user_id, playlist_id ), playlist_fields, tracks_fields );
+
   // Reading playlist data (name, uri, owner, tracks)
   // https://developer.spotify.com/web-api/get-playlist/
-  hu.get( token, hu.playlist_url( user_id, playlist_id ), function( spotify_playlist ){
+  hu.get( token, url, function( spotify_playlist ){
 
     var export_playlist = {
       'name'        : spotify_playlist.name,
@@ -116,7 +123,8 @@ var read_playlist_paginate = function( token, export_playlist, tracks_url, callb
   } else {
     // Pagination continues, reading "next" playlists's tracks
     // https://developer.spotify.com/web-api/get-playlists-tracks/
-    hu.get( token, tracks_url, function( response ){
+    var url = util.format( "%s&fields=%s", tracks_url, tracks_fields );
+    hu.get( token, url, function( response ){
       export_playlist.tracks = export_playlist.tracks.concat( read_tracks( response.items ))
       read_playlist_paginate( token, export_playlist, response.next, callback )
     })
