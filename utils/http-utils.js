@@ -53,24 +53,24 @@ exports.playlist_url = function( user_id, playlist_id ) {
 
 /**
  * Makes a GET request to Spotify Web API.
- * @param {access_token} access token to authorize the request with
- * @param {url}          URL to send the request to
- * @param {handler}      callback function to invoke when response is successful, it is passed a response body when called
+ * @param {token}    access token to authorize the request with
+ * @param {url}      URL to send the request to
+ * @param {callback} callback function to invoke when response is successful, it is passed a response body when called
  */
-exports.get = function( access_token, url, handler ) {
+exports.get = function( token, url, callback ) {
 
   // console.log( "GET: [%s]", url );
   // https://www.npmjs.org/package/request
 
   request.get( url,
-               { headers: { 'Authorization': 'Bearer ' + access_token }, json: true },
+               { headers: { 'Authorization': 'Bearer ' + token }, json: true },
                function( error, response, body ){
     if (( ! error ) && ( response.statusCode === 200 )) {
-      handler( body )
+      callback( body )
     } else {
       console.log( "Failed to send GET request to '%s', status code is %s", url, response.statusCode )
       if ( error ){ console.log( error ) }
-      console.log( body )
+      console.log( body );
     }
   });
 }

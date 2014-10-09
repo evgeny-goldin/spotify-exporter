@@ -106,7 +106,7 @@ app.get( '/export', function( req, res ) {
   if (( token === null ) || ( user_id === null )) {
     console.log( "Missing parameters in 'export' request: token = [%s], user ID = [%s]",
                  token, user_id );
-    res.send( 'Error' );
+    res.send( 'Server-side error' );
   } else {
     u.export( res, token, user_id, playlist_id )
   }
