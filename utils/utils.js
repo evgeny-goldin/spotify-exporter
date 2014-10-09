@@ -101,7 +101,8 @@ var read_playlist = function( res, token, user_id, playlist_id, callback ) {
  * @param {res}             response to send ZIP to
  * @param {token}           access token
  * @param {export_playlist} JSON of a playlist, export format
- * @param {tracks_url} URL to read playlist tracks from, null when pagination is over
+ * @param {tracks_url}      URL to read playlist tracks from, null when pagination is over
+ * @param {callback}        callback to invoke with constructed playlist to export
  */
 var read_playlist_paginate = function( res, token, export_playlist, tracks_url, callback ) {
 
