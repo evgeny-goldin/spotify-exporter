@@ -3,7 +3,7 @@
 
 Exports your Spotify playlists! *(not that you have to, they __do__ backups)*
 
-* [Register](https://developer.spotify.com/my-applications/#!/applications) a new Spotify application
+* [Create](https://developer.spotify.com/my-applications/#!/applications/create) a new Spotify application
 * Create `"app.json"`, similar to `"app-example.json"`, filling in application's `"id"` and `"secret"`
 * `npm install`
 * `node app.js`
