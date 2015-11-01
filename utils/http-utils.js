@@ -86,8 +86,8 @@ exports.get = function( token, url, callback ) {
   // console.log( "GET: [%s]", url );
   // https://www.npmjs.org/package/request
 
-  // Sleep up to 100ms
-  sleep.usleep(Math.floor(Math.random() * 100000));
+  // Sleep from 100 up to 400ms
+  sleep.usleep(100000 + Math.floor(Math.random() * 300000));
 
   request.get( url,
                { headers: { 'Authorization': 'Bearer ' + token }, json: true },
