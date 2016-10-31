@@ -134,7 +134,8 @@ var read_playlist = function( token, user_id, playlist_id, callback ) {
  */
 var read_tracks = function ( track_items ) {
   // https://developer.spotify.com/web-api/get-playlists-tracks/
-  return _.map( track_items, function( track_item ){
+  return _.map(_.filter( track_items, function( track_item ){ return track_item.track != null }), 
+               function( track_item ){
     var track = track_item.track;
     return {
       'name'    : track.name,
